@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Joc de Puntuació</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+
+:root{
+  --slot-size-mobile: 46px;
+  --slot-size-desktop: 54px;
+}
+
+body{
+  -webkit-tap-highlight-color: transparent;
+}
+
+.slot-select{
+  appearance:none;
+  -webkit-appearance:none;
+
+  width:var(--slot-size-mobile);
+  min-width:var(--slot-size-mobile);
+  height:42px;
+
+  border-radius:14px;
+
+  border:2px solid #cbd5e1;
+
+  background:white;
+
+  font-weight:700;
+  text-align:center;
+
+  cursor:pointer;
+
+  transition:all .15s ease;
+
+  outline:none;
+
+  font-size:1rem;
+
+  padding:0;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, #64748b 50%),
+    linear-gradient(135deg, #64748b 50%, transparent 50%);
+
+  background-position:
+    calc(100% - 14px) calc(50% - 3px),
+    calc(100% - 8px) calc(50% - 3px);
+
+  background-size:6px 6px;
+
+  background-repeat:no-repeat;
+}
+
+.slot-select:hover{
+  border-color:#2563eb;
+}
+
+.slot-select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 4px rgba(37,99,235,.18);
+}
+
+.slot-correct{
+  background:#dcfce7 !important;
+  border-color:#16a34a !important;
+  color:#14532d !important;
+}
+
+.slot-error{
+  background:#fee2e2 !important;
+  border-color:#dc2626 !important;
+  color:#7f1d1d !important;
+}
+
+.word{
+  display:inline;
+  white-space:normal;
+}
+
+.exercise-line{
+  line-height:2.9;
+  word-break:break-word;
+}
+
+@media (min-width:640px){
+
+  .slot-select{
+    width:var(--slot-size-desktop);
+    min-width:var(--slot-size-desktop);
+    height:48px;
+    font-size:1.05rem;
+  }
+
+  .exercise-line{
+    line-height:3.2;
+  }
+}
+
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 via-stone-100 to-slate-200 min-h-screen p-2 sm:p-4 text-slate-800">
+
+<div class="max-w-6xl mx-auto">
+
+<div class="bg-white/90 backdrop-blur rounded-[2rem] shadow-2xl border border-white/60 overflow-hidden">
+
+<div class="p-4 sm:p-6 lg:p-8">
+
+<div class="flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between">
+
+<div>
+<h1 class="text-3xl sm:text-4xl font-black tracking-tight">
+Joc de Puntuació
+</h1>
+
+<p class="text-slate-500 mt-2 text-sm sm:text-base">
+Completa els buits amb el signe correcte.
+</p>
+</div>
+
+<div class="flex flex-col sm:flex-row gap-2">
+
+<select
+id="datasetSelect"
+class="rounded-2xl border border-slate-300 bg-white px-4 py-3 font-semibold text-sm sm:text-base outline-none focus:ring-4 focus:ring-sky-200">
+
+</select>
+
+<select
+id="modeSelect"
+class="rounded-2xl border border-slate-300 bg-white px-4 py-3 font-semibold text-sm sm:text-base outline-none focus:ring-4 focus:ring-sky-200">
+
+<option value="training">Entrenament</option>
+<option value="exam">Examen</option>
+
+</select>
+
+</div>
+
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+
+<div class="rounded-3xl bg-sky-600 text-white p-5">
+<div class="text-sm text-sky-100 uppercase tracking-[0.15em]">
+Punts
+</div>
+
+<div id="score" class="text-4xl font-black mt-1">
+0
+</div>
+</div>
+
+<div class="rounded-3xl bg-emerald-600 text-white p-5">
+<div class="text-sm text-emerald-100 uppercase tracking-[0.15em]">
+Encerts
+</div>
+
+<div id="hits" class="text-4xl font-black mt-1">
+0
+</div>
+</div>
+
+<div class="rounded-3xl bg-rose-500 text-white p-5">
+<div class="text-sm text-rose-100 uppercase tracking-[0.15em]">
+Errors
+</div>
+
+<div id="misses" class="text-4xl font-black mt-1">
+0
+</div>
+</div>
+
+</div>
+
+<div
+id="exercise"
+class="mt-6 bg-slate-50 border border-slate-200 rounded-[2rem] p-4 sm:p-6 lg:p-8 min-h-[280px] sm:min-h-[340px] text-[1rem] sm:text-[1.25rem] lg:text-[1.5rem] font-medium">
+
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+
+<button
+id="checkBtn"
+class="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-4 font-bold transition-colors">
+
+Comprova
+
+</button>
+
+<button
+id="answerBtn"
+class="rounded-2xl bg-violet-600 hover:bg-violet-700 text-white px-4 py-4 font-bold transition-colors">
+
+Mostra resposta
+
+</button>
+
+<button
+id="nextBtn"
+class="rounded-2xl bg-sky-600 hover:bg-sky-700 text-white px-4 py-4 font-bold transition-colors">
+
+Següent
+
+</button>
+
+<button
+id="resetBtn"
+class="rounded-2xl bg-rose-600 hover:bg-rose-700 text-white px-4 py-4 font-bold transition-colors">
+
+Reinicia
+
+</button>
+
+</div>
+
+<div
+id="feedback"
+aria-live="polite"
+class="mt-6 rounded-3xl bg-slate-100 text-slate-700 p-4 sm:p-5 text-sm sm:text-base">
+
+Preparat per començar.
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const datasets = [
+  {
+    label:"Exercicis de prova",
+    data:[
+      {
+        pregunta:"Tal com us vaig comunicar en missatges anteriors la conferència es durà a terme el pròxim dimecres 2 de juliol de 2025 a les 19.30 h al Teatre Mar i Terra Palma",
+        respuesta:"Tal com us vaig comunicar en missatges anteriors, la conferència es durà a terme el pròxim dimecres 2 de juliol de 2025 a les 19.30 h al Teatre Mar i Terra, Palma."
+      },
+
+      {
+        pregunta:"Han inaugurat el nou edifici de la Universitat de les Illes Balears la rectora Àngela Maria Sansó el conseller d Educació i Universitats Andreu Solà i la consellera de Cultura Catalina Mora",
+        respuesta:"Han inaugurat el nou edifici de la Universitat de les Illes Balears: la rectora Àngela Maria Sansó, el conseller d Educació i Universitats Andreu Solà i la consellera de Cultura Catalina Mora."
+      }
+    ]
+  }
+];
+
+const SYMBOLS = [
+  "",
+  ",",
+  ".",
+  ";",
+  ":"
+];
+
+let dataset = datasets[0].data;
+
+let currentIndex = 0;
+
+let score = 0;
+let hits = 0;
+let misses = 0;
+
+let currentSlots = [];
+
+const candidateIndexes = [
+  7,
+  15,
+  22,
+  30,
+  40,
+  50
+];
+
+function $(id){
+  return document.getElementById(id);
+}
+
+function initDatasets(){
+
+  const select = $("datasetSelect");
+
+  datasets.forEach((ds,index)=>{
+
+    const option = document.createElement("option");
+
+    option.value = index;
+    option.textContent = ds.label;
+
+    select.appendChild(option);
+
+  });
+
+  select.addEventListener("change",(e)=>{
+
+    dataset = datasets[e.target.value].data;
+
+    currentIndex = 0;
+
+    resetCurrent();
+
+    render();
+
+  });
+
+}
+
+function getCorrectSymbol(word){
+
+  if(word.endsWith(",")) return ",";
+  if(word.endsWith(".")) return ".";
+  if(word.endsWith(";")) return ";";
+  if(word.endsWith(":")) return ":";
+
+  return "";
+}
+
+function buildStructure(){
+
+  const item = dataset[currentIndex];
+
+  const qWords = item.pregunta.split(" ");
+  const aWords = item.respuesta.split(" ");
+
+  const structure = [];
+
+  let slotCounter = 0;
+
+  for(let i=0;i<qWords.length;i++){
+
+    structure.push({
+      type:"word",
+      text:qWords[i]
+    });
+
+    const answerWord = aWords[i] || "";
+
+    const correct = getCorrectSymbol(answerWord);
+
+    const shouldCreateSlot =
+      correct !== "" ||
+      (
+        i > 4 &&
+        i < qWords.length - 2 &&
+        i % 5 === 0
+      );
+
+    if(shouldCreateSlot){
+
+      structure.push({
+        type:"slot",
+        correct,
+        slotIndex:slotCounter
+      });
+
+      slotCounter++;
+
+    }
+
+  }
+
+  return structure;
+
+}
+
+function render(){
+
+  const container = $("exercise");
+
+  container.innerHTML = "";
+
+  const structure = buildStructure();
+
+  const line = document.createElement("div");
+
+  line.className = "exercise-line";
+
+  structure.forEach(part=>{
+
+    if(part.type === "word"){
+
+      const span = document.createElement("span");
+
+      span.className = "word";
+
+      span.textContent =
+        part.text.replace(/[.,;:]$/,"") + " ";
+
+      line.appendChild(span);
+
+    }
+
+    else{
+
+      const select = document.createElement("select");
+
+      select.className = "slot-select";
+
+      select.setAttribute(
+        "aria-label",
+        "Selecciona signe de puntuació"
+      );
+
+      SYMBOLS.forEach(symbol=>{
+
+        const option = document.createElement("option");
+
+        option.value = symbol;
+
+        option.textContent =
+          symbol === ""
+          ? "—"
+          : symbol;
+
+        select.appendChild(option);
+
+      });
+
+      select.value =
+        currentSlots[part.slotIndex] || "";
+
+      select.addEventListener("change",(e)=>{
+
+        currentSlots[part.slotIndex] =
+          e.target.value;
+
+      });
+
+      line.appendChild(select);
+
+      line.appendChild(
+        document.createTextNode(" ")
+      );
+
+    }
+
+  });
+
+  container.appendChild(line);
+
+}
+
+function check(){
+
+  const structure = buildStructure();
+
+  const selects =
+    document.querySelectorAll(".slot-select");
+
+  let localHits = 0;
+  let localMisses = 0;
+
+  structure.forEach(part=>{
+
+    if(part.type !== "slot") return;
+
+    const selected =
+      currentSlots[part.slotIndex] || "";
+
+    const select =
+      selects[part.slotIndex];
+
+    select.classList.remove(
+      "slot-correct",
+      "slot-error"
+    );
+
+    if(selected === part.correct){
+
+      select.classList.add("slot-correct");
+
+      localHits++;
+
+    }
+
+    else{
+
+      select.classList.add("slot-error");
+
+      localMisses++;
+
+    }
+
+  });
+
+  hits += localHits;
+  misses += localMisses;
+
+  score += localHits - localMisses;
+
+  updateHUD();
+
+  $("feedback").textContent =
+    `${localHits} encerts · ${localMisses} errors`;
+
+}
+
+function next(){
+
+  currentIndex++;
+
+  if(currentIndex >= dataset.length){
+    currentIndex = 0;
+  }
+
+  resetCurrent();
+
+  render();
+
+  $("feedback").textContent =
+    "Nova frase.";
+
+}
+
+function reveal(){
+
+  $("feedback").textContent =
+    dataset[currentIndex].respuesta;
+
+}
+
+function resetCurrent(){
+
+  currentSlots = [];
+
+}
+
+function resetGame(){
+
+  currentIndex = 0;
+
+  score = 0;
+  hits = 0;
+  misses = 0;
+
+  resetCurrent();
+
+  updateHUD();
+
+  render();
+
+}
+
+function updateHUD(){
+
+  $("score").textContent = score;
+  $("hits").textContent = hits;
+  $("misses").textContent = misses;
+
+}
+
+$("checkBtn")
+.addEventListener("click",check);
+
+$("nextBtn")
+.addEventListener("click",next);
+
+$("answerBtn")
+.addEventListener("click",reveal);
+
+$("resetBtn")
+.addEventListener("click",resetGame);
+
+initDatasets();
+
+render();
+
+</script>
+
+</body>
+</html>
