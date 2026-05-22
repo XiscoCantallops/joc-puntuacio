@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Joc de Puntuació</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .slot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      margin: 0 0.15rem;
+      border-radius: 0.5rem;
+      border: 2px dashed #cbd5e1;
+      background: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .slot:hover {
+      transform: scale(1.08);
+    }
+
+    .slot-correct {
+      background: #bbf7d0;
+      border-color: #16a34a;
+      color: #14532d;
+    }
+
+    .slot-error {
+      background: #fecaca;
+      border-color: #dc2626;
+      color: #7f1d1d;
+    }
+
+    .word {
+      display: inline;
+      white-space: nowrap;
+    }
+
+    .sentence {
+      line-height: 2.3;
+    }
+
+    .slot:focus {
+      outline: 3px solid #2563eb;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen p-4">
+
+<div class="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl p-6">
+
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+
+    <div>
+      <h1 class="text-3xl font-black text-slate-800">
+        Joc de Puntuació
+      </h1>
+
+      <p class="text-slate-500 mt-1">
+        Completa els buits amb la puntuació correcta.
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      <select id="datasetSelect"
+        class="px-4 py-2 rounded-xl border border-slate-300">
+      </select>
+
+      <select id="modeSelect"
+        class="px-4 py-2 rounded-xl border border-slate-300">
+        <option value="training">Entrenament</option>
+        <option value="exam">Examen</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4 mb-6">
+
+    <div class="bg-sky-600 text-white rounded-2xl p-4">
+      <div class="text-sm opacity-80">Punts</div>
+      <div id="score" class="text-3xl font-black">0</div>
+    </div>
+
+    <div class="bg-emerald-600 text-white rounded-2xl p-4">
+      <div class="text-sm opacity-80">Encerts</div>
+      <div id="hits" class="text-3xl font-black">0</div>
+    </div>
+
+    <div class="bg-rose-600 text-white rounded-2xl p-4">
+      <div class="text-sm opacity-80">Errors</div>
+      <div id="misses" class="text-3xl font-black">0</div>
+    </div>
+
+  </div>
+
+  <div id="sentence"
+    class="sentence bg-slate-50 border border-slate-200 rounded-3xl p-6 text-xl text-slate-800 min-h-[250px]">
+  </div>
+
+  <div class="flex flex-wrap gap-3 mt-6">
+
+    <button id="checkBtn"
+      class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-2xl font-bold">
+      Comprova
+    </button>
+
+    <button id="answerBtn"
+      class="bg-violet-600 hover:bg-violet-700 text-white px-5 py-3 rounded-2xl font-bold">
+      Mostra resposta
+    </button>
+
+    <button id="nextBtn"
+      class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-3 rounded-2xl font-bold">
+      Següent
+    </button>
+
+    <button id="resetBtn"
+      class="bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-2xl font-bold">
+      Reinicia
+    </button>
+
+  </div>
+
+  <div id="feedback"
+    aria-live="polite"
+    class="mt-6 bg-slate-100 rounded-2xl p-4 text-slate-700">
+    Preparat per començar.
+  </div>
+
+</div>
+
+<script>
+const SYMBOLS = ["", ",", ".", ";", ":"];
+
+let datasets = [];
+let dataset = [];
+let current = 0;
+
+let score = 0;
+let hits = 0;
+let misses = 0;
+
+let slots = [];
+
+const sentenceEl = document.getElementById("sentence");
+const feedbackEl = document.getElementById("feedback");
+
+function tokenize(text) {
+  return text.split(" ");
+}
+
+function buildExercise(question, answer) {
+
+  const qWords = tokenize(question);
+  const aWords = tokenize(answer);
+
+  slots = [];
+
+  const container = [];
+
+  for (let i = 0; i < qWords.length; i++) {
+
+    container.push({
+      type: "word",
+      text: qWords[i]
+    });
+
+    if (i < qWords.length - 1) {
+
+      let correct = "";
+
+      const currentWord = aWords[i];
+
+      if (currentWord.endsWith(",")) correct = ",";
+      else if (currentWord.endsWith(".")) correct = ".";
+      else if (currentWord.endsWith(";")) correct = ";";
+      else if (currentWord.endsWith(":")) correct = ":";
+
+      container.push({
+        type: "slot",
+        correct,
+        value: ""
+      });
+    }
+  }
+
+  return container;
+}
+
+function render() {
+
+  sentenceEl.innerHTML = "";
+
+  const item = dataset[current];
+
+  const structure = buildExercise(item.pregunta, item.respuesta);
+
+  let slotIndex = 0;
+
+  structure.forEach(part => {
+
+    if (part.type === "word") {
+
+      const span = document.createElement("span");
+      span.className = "word";
+      span.textContent = part.text.replace(/[,:.;]$/, "") + " ";
+
+      sentenceEl.appendChild(span);
+
+    } else {
+
+      const btn = document.createElement("button");
+
+      btn.className = "slot";
+      btn.tabIndex = 0;
+
+      btn.dataset.index = slotIndex;
+
+      btn.textContent = slots[slotIndex] || " ";
+
+      btn.setAttribute(
+        "aria-label",
+        "Canvia signe de puntuació"
+      );
+
+      btn.addEventListener("click", () => {
+        rotateSlot(slotIndex);
+      });
+
+      btn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          rotateSlot(slotIndex);
+        }
+      });
+
+      sentenceEl.appendChild(btn);
+
+      slotIndex++;
+    }
+
+  });
+
+}
+
+function rotateSlot(index) {
+
+  const currentValue = slots[index] || "";
+
+  let pos = SYMBOLS.indexOf(currentValue);
+
+  pos++;
+
+  if (pos >= SYMBOLS.length) pos = 0;
+
+  slots[index] = SYMBOLS[pos];
+
+  render();
+}
+
+function check() {
+
+  const item = dataset[current];
+
+  const structure = buildExercise(item.pregunta, item.respuesta);
+
+  const slotElements = document.querySelectorAll(".slot");
+
+  let slotIndex = 0;
+
+  structure.forEach(part => {
+
+    if (part.type === "slot") {
+
+      const el = slotElements[slotIndex];
+
+      const selected = slots[slotIndex] || "";
+
+      if (selected === part.correct) {
+
+        el.classList.add("slot-correct");
+
+        score++;
+        hits++;
+
+      } else {
+
+        el.classList.add("slot-error");
+
+        misses++;
+      }
+
+      slotIndex++;
+    }
+
+  });
+
+  updateHUD();
+
+  feedbackEl.textContent =
+    `Resultat: ${hits} encerts · ${misses} errors`;
+}
+
+function next() {
+
+  current++;
+
+  if (current >= dataset.length) {
+    current = 0;
+  }
+
+  slots = [];
+
+  render();
+
+  feedbackEl.textContent = "Nova frase.";
+}
+
+function updateHUD() {
+  document.getElementById("score").textContent = score;
+  document.getElementById("hits").textContent = hits;
+  document.getElementById("misses").textContent = misses;
+}
+
+function reveal() {
+
+  const item = dataset[current];
+
+  feedbackEl.textContent = item.respuesta;
+}
+
+function resetGame() {
+
+  current = 0;
+
+  score = 0;
+  hits = 0;
+  misses = 0;
+
+  slots = [];
+
+  updateHUD();
+
+  render();
+}
+
+async function loadDatasets() {
+
+  const res = await fetch("./datasets.json");
+  datasets = await res.json();
+
+  const select = document.getElementById("datasetSelect");
+
+  datasets.forEach(ds => {
+
+    const option = document.createElement("option");
+
+    option.value = ds.file;
+    option.textContent = ds.label;
+
+    select.appendChild(option);
+  });
+
+  loadDataset(datasets[0].file);
+
+  select.addEventListener("change", (e) => {
+    loadDataset(e.target.value);
+  });
+}
+
+async function loadDataset(file) {
+
+  const res = await fetch("./" + file);
+
+  dataset = await res.json();
+
+  current = 0;
+  slots = [];
+
+  render();
+}
+
+document.getElementById("checkBtn")
+  .addEventListener("click", check);
+
+document.getElementById("nextBtn")
+  .addEventListener("click", next);
+
+document.getElementById("answerBtn")
+  .addEventListener("click", reveal);
+
+document.getElementById("resetBtn")
+  .addEventListener("click", resetGame);
+
+loadDatasets();
+</script>
+
+</body>
+</html>
